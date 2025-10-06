@@ -2,7 +2,7 @@
 
 Este proyecto es la migración completa del sistema de control de oxígeno de C# WinForms a una arquitectura web moderna usando Next.js y Node.js.
 
-## 🏗️ Arquitectura
+## Arquitectura
 
 - **Frontend**: Next.js 14 con React, TypeScript y Tailwind CSS
 - **Backend**: Node.js con Express y Socket.IO
@@ -10,24 +10,25 @@ Este proyecto es la migración completa del sistema de control de oxígeno de C#
 - **Base de Datos**: MySQL (misma estructura que el sistema original)
 - **Tiempo Real**: WebSockets para actualizaciones en vivo
 
-## 🚀 Características
+## Características
 
-### ✅ Implementado
-- ✅ Comunicación Modbus TCP con PLCs
-- ✅ Visualización en tiempo real de 40 jaulas
-- ✅ Control manual de válvulas de oxígeno
-- ✅ Sistema de alertas automáticas
-- ✅ Interfaz responsive y moderna
-- ✅ WebSockets para actualizaciones en vivo
-- ✅ API REST completa
+### Implementado
+- Comunicación Modbus TCP con PLCs
+- Visualización en tiempo real de 40 jaulas
+- Control manual de válvulas de oxígeno
+- Sistema de alertas automáticas
+- Interfaz responsive y moderna
+- WebSockets para actualizaciones en vivo
+- API REST completa
 
-### 🔄 En Desarrollo
-- 🔄 Configuración de límites por jaula
-- 🔄 Gestión de clientes
-- 🔄 Generación de reportes Excel
-- 🔄 Sistema de usuarios y permisos
+### En Desarrollo
+- Configuración de límites por jaula
+- Gestión de clientes
+- Generación de reportes Excel
+- Sistema de usuarios y permisos
 
-## 📁 Estructura del Proyecto
+
+## Estructura del Proyecto
 
 ```
 GUI_MODERNISTA_WEB/
@@ -45,7 +46,7 @@ GUI_MODERNISTA_WEB/
 └── package.json          # Scripts de desarrollo
 ```
 
-## 🛠️ Instalación y Configuración
+## Instalación y Configuración
 
 ### Prerrequisitos
 - Node.js 18+ 
@@ -94,13 +95,13 @@ npm run server    # Backend en puerto 3001
 npm run client    # Frontend en puerto 3000
 ```
 
-## 🌐 Acceso al Sistema
+## Acceso al Sistema
 
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:3001
 - **Health Check**: http://localhost:3001/health
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Jaulas
 - `GET /api/jaulas` - Estado de todas las jaulas
@@ -124,7 +125,7 @@ npm run client    # Frontend en puerto 3000
 - `GET /api/sistema/estado` - Estado del sistema
 - `POST /api/sistema/reiniciar` - Reiniciar sistema
 
-## 🔧 Configuración del PLC
+## Configuración del PLC
 
 El sistema mantiene la misma configuración Modbus TCP que el sistema original:
 
@@ -137,7 +138,7 @@ El sistema mantiene la misma configuración Modbus TCP que el sistema original:
   - 3046-3065: Control válvulas módulo 100
   - 3066-3085: Control válvulas módulo 200
 
-## 🚨 Sistema de Alertas
+## Sistema de Alertas
 
 El sistema envía alertas automáticas por email cuando:
 - Una jaula lleva 30+ minutos inyectando oxígeno
@@ -145,7 +146,7 @@ El sistema envía alertas automáticas por email cuando:
 - Una jaula lleva 1.5+ horas inyectando oxígeno
 - Una jaula lleva 2+ horas inyectando oxígeno
 
-## 🔄 Migración desde Sistema Original
+## Migración desde Sistema Original
 
 ### Ventajas de la Migración
 1. **Acceso Web**: Disponible desde cualquier dispositivo
@@ -156,13 +157,13 @@ El sistema envía alertas automáticas por email cuando:
 6. **Escalable**: Fácil agregar nuevas funcionalidades
 
 ### Compatibilidad
-- ✅ Misma base de datos MySQL
-- ✅ Mismo protocolo Modbus TCP
-- ✅ Misma lógica de control automático
-- ✅ Mismo sistema de alertas
-- ✅ Misma configuración de PLC
+- Misma base de datos MySQL
+- Mismo protocolo Modbus TCP
+- Misma lógica de control automático
+- Mismo sistema de alertas
+- Misma configuración de PLC
 
-## 🐛 Solución de Problemas
+## Solución de Problemas
 
 ### Error de Conexión PLC
 1. Verificar IP y puerto en `server/config.js`
@@ -179,15 +180,15 @@ El sistema envía alertas automáticas por email cuando:
 2. Comprobar configuración de CORS
 3. Verificar firewall
 
-## 📝 Logs
+## Logs
 
 Los logs del sistema se muestran en la consola:
-- ✅ Conexiones exitosas
-- ❌ Errores de conexión
-- 🔧 Acciones de control
-- 📧 Envío de alertas
+- Conexiones exitosas
+- Errores de conexión
+- Acciones de control
+- Envío de alertas
 
-## 🤝 Contribución
+## Contribución
 
 Para contribuir al proyecto:
 1. Fork el repositorio
@@ -196,11 +197,11 @@ Para contribuir al proyecto:
 4. Push a la rama
 5. Crear un Pull Request
 
-## 📄 Licencia
+## Licencia
 
 Este proyecto está bajo la Licencia MIT.
 
-## 📞 Soporte
+## Soporte
 
 Para soporte técnico, contactar al equipo de desarrollo.
 
