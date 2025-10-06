@@ -127,12 +127,16 @@ class DatabaseService {
   // Obtener lista de clientes
   async getClientes() {
     try {
+      console.log('🔄 Consultando clientes en la base de datos...');
       const [rows] = await this.localConnection.execute(
         'SELECT NombreCliente FROM cliente ORDER BY NombreCliente ASC'
       );
-      return rows.map(row => row.NombreCliente);
+      console.log(`📊 Encontrados ${rows.length} clientes en la base de datos`);
+      const clientes = rows.map(row => row.NombreCliente);
+      console.log('📊 Lista de clientes:', clientes);
+      return clientes;
     } catch (error) {
-      console.error('Error obteniendo clientes:', error.message);
+      console.error('❌ Error obteniendo clientes:', error.message);
       return [];
     }
   }

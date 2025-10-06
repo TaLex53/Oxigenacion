@@ -5,6 +5,7 @@ export interface ConnectionStatus {
   isConnected: boolean;
   isWebSocketConnected: boolean;
   isApiConnected: boolean;
+  isModbusConnected: boolean;
   mode: 'online' | 'offline';
 }
 
@@ -13,23 +14,29 @@ export const useConnectionStatus = () => {
     isConnected: false,
     isWebSocketConnected: false,
     isApiConnected: false,
+    isModbusConnected: false,
     mode: 'offline'
   });
 
   useEffect(() => {
-    // Verificar conexión API
+    // Verificar conexión API y Modbus
     const checkApiConnection = async () => {
       try {
         const response = await fetch('http://localhost:3001/health');
+        const modbusResponse = await fetch('http://localhost:3001/api/modbus-status');
+        const modbusData = await modbusResponse.json();
+        
         setStatus(prev => ({
           ...prev,
           isApiConnected: response.ok,
-          isConnected: response.ok && prev.isWebSocketConnected
+          isModbusConnected: modbusData.connected || false,
+          isConnected: response.ok && prev.isWebSocketConnected && (modbusData.connected || false)
         }));
       } catch (error) {
         setStatus(prev => ({
           ...prev,
           isApiConnected: false,
+          isModbusConnected: false,
           isConnected: false
         }));
       }
@@ -41,7 +48,7 @@ export const useConnectionStatus = () => {
       setStatus(prev => ({
         ...prev,
         isWebSocketConnected: isConnected,
-        isConnected: prev.isApiConnected && isConnected,
+        isConnected: prev.isApiConnected && isConnected && prev.isModbusConnected,
         mode: prev.isApiConnected ? 'online' : 'offline'
       }));
     };
@@ -55,7 +62,7 @@ export const useConnectionStatus = () => {
       setStatus(prev => ({
         ...prev,
         isWebSocketConnected: true,
-        isConnected: prev.isApiConnected
+        isConnected: prev.isApiConnected && prev.isModbusConnected
       }));
     };
 

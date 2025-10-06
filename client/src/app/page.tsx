@@ -32,6 +32,7 @@ export default function Home() {
   const [flujo100, setFlujo100] = useState(0);
   const [flujo200, setFlujo200] = useState(0);
   const [clientes, setClientes] = useState<string[]>([]);
+  const [mostrarMensajeJaula, setMostrarMensajeJaula] = useState(false);
   
   const connectionStatus = useConnectionStatus();
 
@@ -114,7 +115,13 @@ export default function Home() {
 
   const handleConfigurarJaula = (id: number) => {
     setJaulaSeleccionada(id);
+    setMostrarMensajeJaula(true);
     console.log('Configurar jaula:', id);
+    
+    // Ocultar el mensaje después de 5 segundos
+    setTimeout(() => {
+      setMostrarMensajeJaula(false);
+    }, 5000);
   };
 
 
@@ -209,10 +216,10 @@ export default function Home() {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <div className={`w-3 h-3 rounded-full ${
-                  connectionStatus.isApiConnected ? 'bg-green-500' : 'bg-red-500'
+                  connectionStatus.isModbusConnected ? 'bg-green-500' : 'bg-red-500'
                 }`}></div>
                 <span className="text-sm text-gray-300">
-                  {connectionStatus.isApiConnected ? 'Conectado' : 'Desconectado'}
+                  {connectionStatus.isModbusConnected ? 'Conectado' : 'Desconectado'}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
@@ -256,8 +263,14 @@ export default function Home() {
               
               {/* Estado de Conexión */}
               <div className="flex items-center mt-4">
-                <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                <span className="text-sm text-green-400">Conectado</span>
+                <div className={`w-3 h-3 rounded-full mr-2 ${
+                  connectionStatus.isModbusConnected ? 'bg-green-500' : 'bg-red-500'
+                }`}></div>
+                <span className={`text-sm ${
+                  connectionStatus.isModbusConnected ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {connectionStatus.isModbusConnected ? 'Conectado' : 'Desconectado'}
+                </span>
                 <Monitor className="w-4 h-4 text-gray-400 ml-4" />
                 <span className="text-sm text-gray-400 ml-1">Diagnóstico</span>
               </div>
@@ -287,20 +300,38 @@ export default function Home() {
                 <div>
                   <label className="block text-sm text-gray-300 mb-1">Min. mg/L:</label>
                   <input 
-                    type="text"
+                    type="number"
                     value={minimo}
-                    onChange={(e) => setMinimo(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Solo permitir números y un punto decimal
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        setMinimo(value);
+                      }
+                    }}
                     className="w-full bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white text-sm"
+                    placeholder="0.0"
+                    min="0"
+                    step="0.1"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm text-gray-300 mb-1">Max. mg/L:</label>
                   <input 
-                    type="text"
+                    type="number"
                     value={maximo}
-                    onChange={(e) => setMaximo(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Solo permitir números y un punto decimal
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        setMaximo(value);
+                      }
+                    }}
                     className="w-full bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white text-sm"
+                    placeholder="0.0"
+                    min="0"
+                    step="0.1"
                   />
                 </div>
 
@@ -374,7 +405,7 @@ export default function Home() {
                 className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded text-sm"
               >
                 Cerrar todo
-              </button>
+                  </button>
             </div>
           </div>
         </div>
@@ -393,6 +424,21 @@ export default function Home() {
           className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
+      )}
+
+      {/* Mensaje de jaula seleccionada */}
+      {mostrarMensajeJaula && (
+        <div className="fixed bottom-16 right-4 z-50 pointer-events-none">
+          <div className="bg-gray-700 border-2 border-green-500 text-green-400 px-6 py-3 rounded-lg shadow-2xl transform transition-all duration-300 ease-in-out animate-pulse">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+              <span className="text-lg font-bold">
+                🐟 Jaula {jaulaSeleccionada} seleccionada
+              </span>
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

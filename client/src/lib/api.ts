@@ -16,9 +16,13 @@ api.interceptors.response.use(
   (error) => {
     console.error('API Error:', error);
     
-    // Solo devolver datos por defecto si es realmente un error de conexión
+    // Solo devolver datos por defecto para errores de conexión específicos
     if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || 
-        (error.message && error.message.includes('ERR_CONNECTION_REFUSED'))) {
+        error.code === 'ERR_NETWORK' ||
+        (error.message && (
+          error.message.includes('ERR_CONNECTION_REFUSED') ||
+          error.message.includes('Network Error')
+        ))) {
       console.warn('⚠️ Error de conexión - usando datos por defecto');
       return Promise.resolve({
         data: {

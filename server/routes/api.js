@@ -17,8 +17,10 @@ const setInstances = (controller, database) => {
 const initializeController = async () => {
   if (!jaulaController) {
     jaulaController = new JaulaController();
-    dbService = new DatabaseService();
     await jaulaController.initialize();
+  }
+  if (!dbService) {
+    dbService = new DatabaseService();
     await dbService.connect();
   }
   return jaulaController;
@@ -241,7 +243,12 @@ router.get('/flujo', async (req, res) => {
 router.get('/clientes', async (req, res) => {
   try {
     if (!dbService) {
-      throw new Error('Database service not initialized');
+      console.log('⚠️ Database service not initialized, waiting...');
+      // Esperar un poco y reintentar
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!dbService) {
+        throw new Error('Database service not initialized');
+      }
     }
     const clientes = await dbService.getClientes();
     res.json({
@@ -348,6 +355,28 @@ router.get('/reportes/clientes', async (req, res) => {
 });
 
 // ===== RUTAS DE ESTADO =====
+
+// Ruta de salud del servidor
+router.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// Ruta para verificar estado de Modbus
+router.get('/modbus-status', (req, res) => {
+  if (!jaulaController) {
+    return res.json({ connected: false, error: 'Controller not initialized' });
+  }
+  
+  const modbusStatus = jaulaController.modbus ? jaulaController.modbus.isConnected : false;
+  res.json({ 
+    connected: modbusStatus,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Obtener estado del sistema
 router.get('/sistema/estado', async (req, res) => {
