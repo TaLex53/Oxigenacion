@@ -12,7 +12,8 @@ import {
   Wifi,
   WifiOff,
   Eye,
-  Monitor
+  Monitor,
+  RefreshCw
 } from 'lucide-react';
 import Dashboard from '@/components/Dashboard';
 import { useConnectionStatus } from '@/lib/useConnectionStatus';
@@ -29,20 +30,45 @@ export default function Home() {
   const [supervisor, setSupervisor] = useState('');
   const [supervisorCierre, setSupervisorCierre] = useState('');
   const [oxigenoActivo, setOxigenoActivo] = useState(false);
+  
+  // Estado para almacenar parámetros de cada jaula
+  const [parametrosJaulas, setParametrosJaulas] = useState<{[key: number]: {
+    cliente: string;
+    minimo: string;
+    maximo: string;
+    inyeccion: string;
+    supervisor: string;
+    supervisorCierre: string;
+    oxigenoActivo: boolean;
+  }}>({});
   const [flujo100, setFlujo100] = useState(0);
   const [flujo200, setFlujo200] = useState(0);
   const [clientes, setClientes] = useState<string[]>([]);
   const [mostrarMensajeJaula, setMostrarMensajeJaula] = useState(false);
+  const [oxigenacionAutomatica, setOxigenacionAutomatica] = useState(false);
+  const [estadoJaulas, setEstadoJaulas] = useState<any>(null);
   
   const connectionStatus = useConnectionStatus();
+
+  // Cargar parámetros guardados del localStorage después de la hidratación
+  useEffect(() => {
+    const saved = localStorage.getItem('parametrosJaulas');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        console.log('📋 Parámetros cargados del localStorage:', parsed);
+        setParametrosJaulas(parsed);
+      } catch (error) {
+        console.error('Error cargando parámetros del localStorage:', error);
+      }
+    }
+  }, []);
 
   // Cargar clientes al montar el componente
   useEffect(() => {
     const loadClientes = async () => {
       try {
-        console.log('🔄 Cargando clientes...');
         const clientesData = await clienteAPI.getClientes();
-        console.log('📊 Datos de clientes recibidos:', clientesData);
         setClientes(clientesData);
       } catch (error) {
         console.error('❌ Error cargando clientes:', error);
@@ -54,12 +80,54 @@ export default function Home() {
     loadClientes();
   }, []);
 
+  // Cargar estado de jaulas para monitoreo de oxigenación automática
+  useEffect(() => {
+    const loadEstadoJaulas = async () => {
+      try {
+        const data = await jaulaAPI.getEstadoJaulas();
+        setEstadoJaulas(data);
+      } catch (error) {
+        console.error('❌ Error cargando estado de jaulas:', error);
+      }
+    };
+
+    loadEstadoJaulas();
+    
+    // Actualizar cada 5 segundos
+    const interval = setInterval(loadEstadoJaulas, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Guardar parámetros automáticamente cuando cambien
+  useEffect(() => {
+    guardarParametrosJaula();
+  }, [cliente, minimo, maximo, inyeccion, supervisor, supervisorCierre, oxigenoActivo]);
+
+  // Verificar oxigenación automática cuando cambien los datos de jaulas o parámetros
+  useEffect(() => {
+    if (estadoJaulas && minimo && maximo) {
+      verificarOxigenacionAutomatica();
+    }
+  }, [estadoJaulas, minimo, maximo, jaulaSeleccionada]);
+
+  // Efecto para detectar cambios en oxigenoActivo (solo para jaula 111 y "A Pedido")
+  useEffect(() => {
+    if (jaulaSeleccionada === 111 && inyeccion === "A Pedido") {
+      console.log(`🔍 Frontend - Estado oxigenoActivo cambió:`, {
+        timestamp: new Date().toISOString(),
+        jaula: jaulaSeleccionada,
+        oxigenoActivo,
+        inyeccion,
+        minimo,
+        maximo
+      });
+    }
+  }, [oxigenoActivo, jaulaSeleccionada, inyeccion, minimo, maximo]);
+
   // Cargar datos de flujo periódicamente
   useEffect(() => {
     const loadFlujoData = async () => {
       try {
-        console.log('🔄 Cargando datos de flujo...');
-        
         // Agregar timeout y headers para mejor manejo de errores
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
@@ -79,11 +147,9 @@ export default function Home() {
         }
         
         const data = await response.json();
-        console.log('📊 Datos recibidos:', data.data.flujos);
         if (data.success && data.data.flujos) {
           setFlujo100(data.data.flujos.flujo100 || 0);
           setFlujo200(data.data.flujos.flujo200 || 0);
-          console.log(`✅ Flujos actualizados - 100: ${data.data.flujos.flujo100}, 200: ${data.data.flujos.flujo200}`);
         }
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
@@ -113,10 +179,73 @@ export default function Home() {
     { id: 'configuracion', label: 'Configuración', icon: Settings },
   ];
 
+  // Función para guardar parámetros de la jaula actual
+  const guardarParametrosJaula = () => {
+    const nuevosParametros = {
+      cliente,
+      minimo,
+      maximo,
+      inyeccion,
+      supervisor,
+      supervisorCierre,
+      oxigenoActivo
+    };
+    
+    setParametrosJaulas(prev => {
+      const actualizados = {
+        ...prev,
+        [jaulaSeleccionada]: nuevosParametros
+      };
+      
+      // Guardar en localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('parametrosJaulas', JSON.stringify(actualizados));
+        } catch (error) {
+          console.error('Error guardando parámetros en localStorage:', error);
+        }
+      }
+      
+      return actualizados;
+    });
+  };
+
   const handleConfigurarJaula = (id: number) => {
+    // Guardar parámetros de la jaula actual antes de cambiar
+    guardarParametrosJaula();
+    
     setJaulaSeleccionada(id);
     setMostrarMensajeJaula(true);
     console.log('Configurar jaula:', id);
+    
+    // Resetear estado de oxigenación automática al cambiar de jaula
+    setOxigenacionAutomatica(false);
+    console.log(`🔄 Estado de oxigenación automática reseteado para jaula ${id}`);
+    
+    // Cargar parámetros específicos de la jaula seleccionada
+    const parametrosJaula = parametrosJaulas[id];
+    
+    if (parametrosJaula) {
+      // Si ya tiene parámetros configurados, cargarlos
+      console.log(`📋 Cargando parámetros guardados para jaula ${id}:`, parametrosJaula);
+      setCliente(parametrosJaula.cliente);
+      setMinimo(parametrosJaula.minimo);
+      setMaximo(parametrosJaula.maximo);
+      setInyeccion(parametrosJaula.inyeccion);
+      setSupervisor(parametrosJaula.supervisor);
+      setSupervisorCierre(parametrosJaula.supervisorCierre);
+      setOxigenoActivo(parametrosJaula.oxigenoActivo);
+    } else {
+      // Si es la primera vez, usar valores por defecto
+      console.log(`🆕 Primera configuración para jaula ${id}, usando valores por defecto`);
+      setCliente('');
+      setMinimo('0');
+      setMaximo('0');
+      setInyeccion('Normal');
+      setSupervisor('');
+      setSupervisorCierre('');
+      setOxigenoActivo(false);
+    }
     
     // Ocultar el mensaje después de 5 segundos
     setTimeout(() => {
@@ -124,15 +253,168 @@ export default function Home() {
     }, 5000);
   };
 
-
-  const handleCerrarTodo = () => {
-    console.log('Cerrar todas las válvulas');
+  // Función para obtener el nivel de oxígeno de una jaula específica
+  const getNivelOxigeno = (jaulaId: number) => {
+    if (!estadoJaulas) return 0;
+    
+    if (jaulaId < 130) {
+      // Módulo 100
+      const index = jaulaId - 101;
+      return parseFloat(estadoJaulas.modulo100.niveles[index] || '0');
+    } else {
+      // Módulo 200
+      const index = jaulaId - 201;
+      return parseFloat(estadoJaulas.modulo200.niveles[index] || '0');
+    }
   };
+
+  // Función para verificar si debe activar oxigenación automática
+  const verificarOxigenacionAutomatica = async () => {
+    if (!estadoJaulas) return;
+    
+    const nivelActual = getNivelOxigeno(jaulaSeleccionada);
+    const min = parseFloat(minimo) || 0;
+    const max = parseFloat(maximo) || 0;
+    
+    // Log solo cuando hay cambios importantes
+    if (jaulaSeleccionada === 111 && inyeccion === "A Pedido") {
+      console.log(`🔍 Frontend - Verificando oxigenación automática:`, {
+        timestamp: new Date().toISOString(),
+        jaula: jaulaSeleccionada,
+        nivel: nivelActual,
+        min,
+        max,
+        inyeccion,
+        oxigenoActivo: oxigenoActivo,
+        estadoJaulas: !!estadoJaulas
+      });
+    }
+    
+    // Determinar el tipo de operación basado en los valores
+    const esSetearValores = min > 0 && max > 0 && min < 20 && max < 20;
+    const esAPedido = inyeccion === "A Pedido"; // Detectar "A Pedido" por el tipo de inyección
+    
+    // Para "A Pedido", no hacer verificaciones automáticas
+    if (esAPedido) {
+      console.log(`🔧 Modo "A Pedido" detectado - No se realizan verificaciones automáticas`);
+      console.log(`   📊 Valores detectados: min=${min}, max=${max}`);
+      console.log(`   📊 Condición esAPedido: ${esAPedido}`);
+      console.log(`   📊 Jaula: ${jaulaSeleccionada}, OxigenacionAutomatica: ${oxigenacionAutomatica}`);
+      return;
+    }
+    
+    // Si el oxígeno está cerrado manualmente, no reactivar automáticamente
+    if (!oxigenoActivo) {
+      console.log(`🔒 Oxígeno cerrado manualmente - No reactivando automáticamente para jaula ${jaulaSeleccionada}`);
+      return;
+    }
+    
+    if (esSetearValores) {
+      // Modo SETEO: Activar solo cuando el nivel esté exactamente en el valor establecido
+      const esValorExacto = min === max && Math.abs(nivelActual - min) < 0.1; // Tolerancia de 0.1 mg/L
+      const dentroDelRango = min !== max && nivelActual >= min && nivelActual <= max;
+      const alcanzoMaximo = nivelActual >= max; // Verificar si alcanzó el máximo
+      
+      if ((esValorExacto || dentroDelRango) && !oxigenacionAutomatica) {
+        if (esValorExacto) {
+          console.log(`🔄 Activando modo SETEO para jaula ${jaulaSeleccionada} - Nivel: ${nivelActual} mg/L (valor exacto ${min})`);
+        } else {
+          console.log(`🔄 Activando modo SETEO para jaula ${jaulaSeleccionada} - Nivel: ${nivelActual} mg/L (rango ${min}-${max})`);
+        }
+        setOxigenacionAutomatica(true);
+        await activarOxigenoAutomatico();
+      }
+      // Si el nivel está fuera del rango, desactivar modo seteo
+      // Para valores exactos (5.5-5.5), NO cerrar automáticamente, solo oscilar
+      else if (!esValorExacto && !dentroDelRango) {
+        console.log(`🛑 Desactivando modo SETEO para jaula ${jaulaSeleccionada} - Nivel: ${nivelActual} mg/L (fuera del rango ${min}-${max})`);
+        setOxigenacionAutomatica(false);
+      }
+      // Para rangos (9.9-10), cerrar automáticamente cuando alcance el máximo
+      else if (min !== max && alcanzoMaximo && oxigenoActivo) {
+        console.log(`🔒 Cerrando oxígeno automáticamente - Jaula ${jaulaSeleccionada} alcanzó máximo ${max} mg/L (rango ${min}-${max})`);
+        setOxigenacionAutomatica(false);
+        setOxigenoActivo(false);
+        // Enviar comando de cierre al servidor
+        try {
+          await jaulaAPI.controlarJaula(jaulaSeleccionada, 'cerrar', supervisor, cliente, inyeccion);
+          console.log(`✅ Cierre automático enviado al servidor para jaula ${jaulaSeleccionada}`);
+        } catch (error) {
+          console.error('Error cerrando oxígeno automáticamente:', error);
+        }
+      }
+    } else {
+      // Si no es seteo válido, desactivar oxigenación automática
+      // PERO NO si es "A Pedido" (ya manejado arriba)
+      if (oxigenacionAutomatica && !esAPedido) {
+        console.log(`🛑 Desactivando oxigenación automática - Rango inválido: ${min}-${max}`);
+        setOxigenacionAutomatica(false);
+      }
+    }
+  };
+
+  // Función para activar oxígeno automáticamente
+  const activarOxigenoAutomatico = async () => {
+    try {
+      console.log(`🤖 Activando oxígeno automáticamente para jaula ${jaulaSeleccionada}`);
+      
+      // Primero configurar los límites en el servidor
+      const limitesResult = await jaulaAPI.configurarLimites(
+        jaulaSeleccionada, 
+        parseFloat(minimo), 
+        parseFloat(maximo)
+      );
+      
+      if (limitesResult.success) {
+        console.log(`✅ Límites configurados: ${minimo}-${maximo} mg/L para jaula ${jaulaSeleccionada}`);
+        
+        // Luego activar el oxígeno
+        const result = await jaulaAPI.controlarJaula(
+          jaulaSeleccionada, 
+          'abrir', 
+          supervisor, 
+          cliente, 
+          inyeccion,
+          parseFloat(minimo),
+          parseFloat(maximo)
+        );
+        
+        if (result.success) {
+          setOxigenoActivo(true);
+          console.log(`✅ Oxígeno activado automáticamente para jaula ${jaulaSeleccionada}`);
+        } else {
+          console.error('❌ Error activando oxígeno automáticamente:', result.message);
+        }
+      } else {
+        console.error('❌ Error configurando límites:', limitesResult.error);
+      }
+    } catch (error) {
+      console.error('❌ Error activando oxígeno automáticamente:', error);
+    }
+  };
+
+
 
   const handleToggleOxigeno = async () => {
     try {
       const action = oxigenoActivo ? 'cerrar' : 'abrir';
       console.log(`🔄 ${action === 'abrir' ? 'Iniciando' : 'Cerrando'} oxígeno para jaula ${jaulaSeleccionada}`);
+      
+      // Si se va a abrir, primero configurar los límites
+      if (action === 'abrir') {
+        const limitesResult = await jaulaAPI.configurarLimites(
+          jaulaSeleccionada, 
+          parseFloat(minimo), 
+          parseFloat(maximo)
+        );
+        
+        if (!limitesResult.success) {
+          console.error('❌ Error configurando límites:', limitesResult.error);
+          return;
+        }
+        
+        console.log(`✅ Límites configurados: ${minimo}-${maximo} mg/L para jaula ${jaulaSeleccionada}`);
+      }
       
       // Llamar a la API para controlar la jaula
       const result = await jaulaAPI.controlarJaula(
@@ -140,11 +422,30 @@ export default function Home() {
         action, 
         supervisor, 
         cliente, 
-        inyeccion
+        inyeccion,
+        action === 'abrir' ? parseFloat(minimo) : undefined,
+        action === 'abrir' ? parseFloat(maximo) : undefined
       );
       
       if (result.success) {
-        setOxigenoActivo(!oxigenoActivo);
+        const nuevoEstado = !oxigenoActivo;
+        setOxigenoActivo(nuevoEstado);
+        
+        // Actualizar parámetros de la jaula
+        setParametrosJaulas(prev => ({
+          ...prev,
+          [jaulaSeleccionada]: {
+            ...prev[jaulaSeleccionada],
+            oxigenoActivo: nuevoEstado
+          }
+        }));
+        
+        // Log para diagnosticar cambios de estado
+        console.log(`🔄 Estado oxigenoActivo cambiado para jaula ${jaulaSeleccionada}:`, {
+          nuevoEstado,
+          inyeccion: parametrosJaulas[jaulaSeleccionada]?.inyeccion,
+          accion: action
+        });
         
         if (action === 'abrir') {
           console.log(`✅ Oxígeno iniciado para jaula ${jaulaSeleccionada}`);
@@ -153,7 +454,17 @@ export default function Home() {
           console.log(`   Inyección: ${inyeccion}`);
           console.log(`   Min: ${minimo} mg/L, Max: ${maximo} mg/L`);
         } else {
-          console.log(`🛑 Oxígeno cerrado para jaula ${jaulaSeleccionada}`);
+          // Si se cierra manualmente, desactivar oxigenación automática
+          setOxigenacionAutomatica(false);
+          console.log(`🛑 Oxígeno cerrado manualmente para jaula ${jaulaSeleccionada} - Desactivando oxigenación automática`);
+          
+          // Forzar el cierre en el servidor
+          try {
+            await jaulaAPI.controlarJaula(jaulaSeleccionada, 'cerrar', supervisor, cliente, inyeccion);
+            console.log(`🔒 Cierre forzado enviado al servidor para jaula ${jaulaSeleccionada}`);
+          } catch (error) {
+            console.error('Error forzando cierre:', error);
+          }
         }
       } else {
         console.error('Error controlando jaula:', result.message);
@@ -166,7 +477,7 @@ export default function Home() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard onConfigurarJaula={handleConfigurarJaula} />;
+        return <Dashboard onConfigurarJaula={handleConfigurarJaula} jaulaSeleccionada={jaulaSeleccionada} oxigenoActivo={oxigenoActivo} parametrosJaulas={parametrosJaulas} />;
       case 'reportes':
         return (
           <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -189,7 +500,7 @@ export default function Home() {
           </div>
         );
       default:
-        return <Dashboard onConfigurarJaula={handleConfigurarJaula} />;
+        return <Dashboard onConfigurarJaula={handleConfigurarJaula} jaulaSeleccionada={jaulaSeleccionada} oxigenoActivo={oxigenoActivo} parametrosJaulas={parametrosJaulas} />;
     }
   };
 
@@ -232,6 +543,14 @@ export default function Home() {
                   {connectionStatus.isWebSocketConnected ? 'Tiempo Real' : 'Modo Offline'}
                 </span>
               </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="flex items-center space-x-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200"
+                title="Refrescar página"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="text-sm">Refrescar</span>
+              </button>
             </div>
           </div>
         </div>
@@ -278,7 +597,9 @@ export default function Home() {
 
             {/* Sección JAULA */}
             <div className="bg-gray-700 rounded-lg p-4 mb-6">
-              <h3 className="text-lg font-bold text-white mb-4">JAULA {jaulaSeleccionada}</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-white">JAULA {jaulaSeleccionada}</h3>
+              </div>
               
               <div className="space-y-3">
                 <div>
@@ -383,6 +704,11 @@ export default function Home() {
                 <span className="text-sm font-medium text-white">
                   {oxigenoActivo ? 'Cerrar Oxigeno' : 'Iniciar Oxigeno'}
                 </span>
+                {oxigenacionAutomatica && (
+                  <span className="text-xs text-green-400 font-bold animate-pulse">
+                    🤖 AUTO
+                  </span>
+                )}
               </div>
             </div>
 
@@ -398,15 +724,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Botón Cerrar todo */}
-            <div className="mt-auto">
-              <button
-                onClick={handleCerrarTodo}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded text-sm"
-              >
-                Cerrar todo
-                  </button>
-            </div>
           </div>
         </div>
 

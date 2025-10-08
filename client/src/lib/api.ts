@@ -136,13 +136,17 @@ export const jaulaAPI = {
     action: 'abrir' | 'cerrar', 
     supervisor?: string, 
     cliente?: string, 
-    inyeccion?: string
+    inyeccion?: string,
+    minimo?: number,
+    maximo?: number
   ) => {
     const response = await api.post(`/jaulas/${id}/control`, {
       action,
       supervisor,
       cliente,
-      inyeccion
+      inyeccion,
+      minimo,
+      maximo
     });
     return response.data;
   },
@@ -172,11 +176,7 @@ export const jaulaAPI = {
 export const clienteAPI = {
   // Obtener lista de clientes
   getClientes: async (): Promise<string[]> => {
-    console.log('🔍 clienteAPI.getClientes() - Iniciando petición...');
     const response = await api.get('/clientes');
-    console.log('🔍 clienteAPI.getClientes() - Respuesta completa:', response);
-    console.log('🔍 clienteAPI.getClientes() - response.data:', response.data);
-    console.log('🔍 clienteAPI.getClientes() - response.data.data:', response.data.data);
     return response.data.data;
   },
 

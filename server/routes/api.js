@@ -100,7 +100,7 @@ router.get('/jaulas/:id', async (req, res) => {
 router.post('/jaulas/:id/control', async (req, res) => {
   try {
     const jaulaId = parseInt(req.params.id);
-    const { action, supervisor, cliente, inyeccion } = req.body;
+    const { action, supervisor, cliente, inyeccion, minimo, maximo } = req.body;
 
     if (!['abrir', 'cerrar'].includes(action)) {
       return res.status(400).json({
@@ -114,7 +114,9 @@ router.post('/jaulas/:id/control', async (req, res) => {
       action, 
       supervisor, 
       cliente, 
-      inyeccion
+      inyeccion,
+      minimo,
+      maximo
     );
 
     res.json({

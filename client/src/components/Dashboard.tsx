@@ -16,9 +16,20 @@ import socketService from '@/lib/socket';
 
 interface DashboardProps {
   onConfigurarJaula: (id: number) => void;
+  jaulaSeleccionada: number;
+  oxigenoActivo: boolean;
+  parametrosJaulas?: {[key: number]: {
+    cliente: string;
+    minimo: string;
+    maximo: string;
+    inyeccion: string;
+    supervisor: string;
+    supervisorCierre: string;
+    oxigenoActivo: boolean;
+  }};
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula, jaulaSeleccionada, oxigenoActivo, parametrosJaulas }) => {
   const [estadoJaulas, setEstadoJaulas] = useState<EstadoJaulas | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +98,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
     try {
       setLoading(true);
       const data = await jaulaAPI.getEstadoJaulas();
-      console.log('📊 Datos de jaulas recibidos:', data);
       setEstadoJaulas(data);
       setError(null);
     } catch (err) {
@@ -151,6 +161,72 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
     }
   };
 
+  // Función para determinar el tipo de operación y estado de la barra
+  const getEstadoBarraCarga = (jaulaId: number, nivel: number) => {
+    if (!parametrosJaulas || !parametrosJaulas[jaulaId]) {
+      return {
+        tipo: 'normal',
+        isInyectando: false,
+        texto: '',
+        color: 'bg-gray-500',
+        width: `${Math.min((nivel / 15) * 100, 100)}%`
+      };
+    }
+
+    const params = parametrosJaulas[jaulaId];
+    const min = parseFloat(params.minimo) || 0;
+    const max = parseFloat(params.maximo) || 0;
+    const esSetearValores = min > 0 && max > 0 && min < 20 && max < 20;
+    const esAPedido = params.inyeccion === "A Pedido";
+    const esValorExacto = min === max && Math.abs(nivel - min) < 0.1; // Tolerancia de 0.1 mg/L
+    const dentroDelRango = min !== max && nivel >= min && nivel <= max;
+
+    // Verificar si esta jaula está oxigenando (sin importar si está seleccionada)
+    const estaOxigenando = params.oxigenoActivo;
+    
+    // Log para diagnosticar
+    // Log solo para jaula 111 y solo cuando está activa
+    if (jaulaId === 111 && (estaOxigenando || params.oxigenoActivo)) {
+      console.log(`🔍 Dashboard - Jaula ${jaulaId} ACTIVA:`, {
+        inyeccion: params.inyeccion,
+        esAPedido,
+        estaOxigenando,
+        oxigenoActivo: params.oxigenoActivo,
+        min,
+        max
+      });
+    }
+    
+    if (esAPedido && estaOxigenando) {
+      // Modo "A Pedido": Barra animada con "INYECTANDO OXÍGENO"
+      return {
+        tipo: 'carga',
+        isInyectando: true,
+        texto: 'INYECTANDO OXÍGENO',
+        color: 'bg-blue-400 animate-pulse',
+        width: '100%'
+      };
+    } else if (esSetearValores && estaOxigenando && (esValorExacto || dentroDelRango)) {
+      // Modo SETEO: Barra cargada sin variación con "OSCILANDO"
+      return {
+        tipo: 'seteo',
+        isInyectando: true,
+        texto: 'OSCILANDO',
+        color: 'bg-green-400',
+        width: '100%'
+      };
+    } else {
+      // Modo normal: Barra proporcional al nivel
+      return {
+        tipo: 'normal',
+        isInyectando: false,
+        texto: '',
+        color: 'bg-gray-500',
+        width: `${Math.min((nivel / 15) * 100, 100)}%`
+      };
+    }
+  };
+
   if (loading && !estadoJaulas) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -192,13 +268,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
               const index = jaulaId - 101;
               const nivel = parseFloat(jaulasData.modulo100.niveles[index] || '0');
               const isActiva = jaulasData.modulo100.activas[index] === 1;
-              const isInyectando = jaulasData.modulo100.CantPeces[index] === 1;
               const cliente = jaulasData.modulo100.empresas[index] || '';
+              const estadoBarra = getEstadoBarraCarga(jaulaId, nivel);
               
               return (
                 <div
                   key={jaulaId}
-                  className="bg-gray-700 rounded p-3 text-center cursor-pointer hover:bg-gray-600 transition-colors"
+                  className="bg-gray-700 rounded p-4 text-center cursor-pointer hover:bg-gray-600 transition-colors"
                   onClick={() => onConfigurarJaula(jaulaId)}
                 >
                   <div className="text-sm font-bold text-white mb-1">
@@ -209,26 +285,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
                   }`}>
                     {cliente && cliente !== '-----' ? cliente : '-----'}
                   </div>
-                  <div className={`text-lg font-bold mb-2 ${
+                  <div className={`text-xl font-bold mb-2 ${
                     nivel === 0 ? 'text-gray-400' : 
                     nivel > 8 ? 'text-red-400' : 'text-green-400'
                   }`}>
                     {nivel.toFixed(1)} mg/L
                   </div>
-                  <div className="h-1 bg-gray-600 rounded mb-1">
+                  <div className="h-1.5 bg-gray-600 rounded mb-1">
                     <div 
                       className={`h-full rounded transition-all duration-300 ${
-                        isInyectando ? 'bg-blue-400 animate-pulse' : 
+                        estadoBarra.isInyectando ? estadoBarra.color : 
                         isActiva ? 'bg-green-400' : 'bg-gray-500'
                       }`}
                       style={{ 
-                        width: isInyectando ? '100%' : `${Math.min((nivel / 15) * 100, 100)}%` 
+                        width: estadoBarra.isInyectando ? estadoBarra.width : `${Math.min((nivel / 15) * 100, 100)}%` 
                       }}
                     ></div>
                   </div>
-                  {isInyectando && (
-                    <div className="text-xs text-blue-400 font-bold animate-pulse">
-                      CARGANDO OXÍGENO
+                  {estadoBarra.isInyectando && (
+                    <div className={`text-xs font-bold ${
+                      estadoBarra.tipo === 'carga' ? 'text-blue-400 animate-pulse' : 
+                      estadoBarra.tipo === 'seteo' ? 'text-green-400' : 'text-gray-400'
+                    }`}>
+                      {estadoBarra.texto}
                     </div>
                   )}
                 </div>
@@ -243,13 +322,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
               const index = jaulaId - 101;
               const nivel = parseFloat(jaulasData.modulo100.niveles[index] || '0');
               const isActiva = jaulasData.modulo100.activas[index] === 1;
-              const isInyectando = jaulasData.modulo100.CantPeces[index] === 1;
               const cliente = jaulasData.modulo100.empresas[index] || '';
+              const estadoBarra = getEstadoBarraCarga(jaulaId, nivel);
               
               return (
                 <div
                   key={jaulaId}
-                  className="bg-gray-700 rounded p-3 text-center cursor-pointer hover:bg-gray-600 transition-colors"
+                  className="bg-gray-700 rounded p-4 text-center cursor-pointer hover:bg-gray-600 transition-colors"
                   onClick={() => onConfigurarJaula(jaulaId)}
                 >
                   <div className="text-sm font-bold text-white mb-1">
@@ -260,26 +339,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
                   }`}>
                     {cliente && cliente !== '-----' ? cliente : '-----'}
                   </div>
-                  <div className={`text-lg font-bold mb-2 ${
+                  <div className={`text-xl font-bold mb-2 ${
                     nivel === 0 ? 'text-gray-400' : 
                     nivel > 8 ? 'text-red-400' : 'text-green-400'
                   }`}>
                     {nivel.toFixed(1)} mg/L
                   </div>
-                  <div className="h-1 bg-gray-600 rounded mb-1">
+                  <div className="h-1.5 bg-gray-600 rounded mb-1">
                     <div 
                       className={`h-full rounded transition-all duration-300 ${
-                        isInyectando ? 'bg-blue-400 animate-pulse' : 
+                        estadoBarra.isInyectando ? estadoBarra.color : 
                         isActiva ? 'bg-green-400' : 'bg-gray-500'
                       }`}
                       style={{ 
-                        width: isInyectando ? '100%' : `${Math.min((nivel / 15) * 100, 100)}%` 
+                        width: estadoBarra.isInyectando ? estadoBarra.width : `${Math.min((nivel / 15) * 100, 100)}%` 
                       }}
                     ></div>
                   </div>
-                  {isInyectando && (
-                    <div className="text-xs text-blue-400 font-bold animate-pulse">
-                      CARGANDO OXÍGENO
+                  {estadoBarra.isInyectando && (
+                    <div className={`text-xs font-bold ${
+                      estadoBarra.tipo === 'carga' ? 'text-blue-400 animate-pulse' : 
+                      estadoBarra.tipo === 'seteo' ? 'text-green-400' : 'text-gray-400'
+                    }`}>
+                      {estadoBarra.texto}
                     </div>
                   )}
                 </div>
@@ -300,13 +382,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
               const index = jaulaId - 201;
               const nivel = parseFloat(jaulasData.modulo200.niveles[index] || '0');
               const isActiva = jaulasData.modulo200.activas[index] === 1;
-              const isInyectando = jaulasData.modulo200.CantPeces[index] === 1;
               const cliente = jaulasData.modulo200.empresas[index] || '';
+              const estadoBarra = getEstadoBarraCarga(jaulaId, nivel);
               
               return (
                 <div
                   key={jaulaId}
-                  className="bg-gray-700 rounded p-3 text-center cursor-pointer hover:bg-gray-600 transition-colors"
+                  className="bg-gray-700 rounded p-4 text-center cursor-pointer hover:bg-gray-600 transition-colors"
                   onClick={() => onConfigurarJaula(jaulaId)}
                 >
                   <div className="text-sm font-bold text-white mb-1">
@@ -317,26 +399,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
                   }`}>
                     {cliente && cliente !== '-----' ? cliente : '-----'}
                   </div>
-                  <div className={`text-lg font-bold mb-2 ${
+                  <div className={`text-xl font-bold mb-2 ${
                     nivel === 0 ? 'text-gray-400' : 
                     nivel > 8 ? 'text-red-400' : 'text-green-400'
                   }`}>
                     {nivel.toFixed(1)} mg/L
                   </div>
-                  <div className="h-1 bg-gray-600 rounded mb-1">
+                  <div className="h-1.5 bg-gray-600 rounded mb-1">
                     <div 
                       className={`h-full rounded transition-all duration-300 ${
-                        isInyectando ? 'bg-blue-400 animate-pulse' : 
+                        estadoBarra.isInyectando ? estadoBarra.color : 
                         isActiva ? 'bg-green-400' : 'bg-gray-500'
                       }`}
                       style={{ 
-                        width: isInyectando ? '100%' : `${Math.min((nivel / 15) * 100, 100)}%` 
+                        width: estadoBarra.isInyectando ? estadoBarra.width : `${Math.min((nivel / 15) * 100, 100)}%` 
                       }}
                     ></div>
                   </div>
-                  {isInyectando && (
-                    <div className="text-xs text-blue-400 font-bold animate-pulse">
-                      CARGANDO OXÍGENO
+                  {estadoBarra.isInyectando && (
+                    <div className={`text-xs font-bold ${
+                      estadoBarra.tipo === 'carga' ? 'text-blue-400 animate-pulse' : 
+                      estadoBarra.tipo === 'seteo' ? 'text-green-400' : 'text-gray-400'
+                    }`}>
+                      {estadoBarra.texto}
                     </div>
                   )}
                 </div>
@@ -351,13 +436,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
               const index = jaulaId - 201;
               const nivel = parseFloat(jaulasData.modulo200.niveles[index] || '0');
               const isActiva = jaulasData.modulo200.activas[index] === 1;
-              const isInyectando = jaulasData.modulo200.CantPeces[index] === 1;
               const cliente = jaulasData.modulo200.empresas[index] || '';
+              const estadoBarra = getEstadoBarraCarga(jaulaId, nivel);
               
               return (
                 <div
                   key={jaulaId}
-                  className="bg-gray-700 rounded p-3 text-center cursor-pointer hover:bg-gray-600 transition-colors"
+                  className="bg-gray-700 rounded p-4 text-center cursor-pointer hover:bg-gray-600 transition-colors"
                   onClick={() => onConfigurarJaula(jaulaId)}
                 >
                   <div className="text-sm font-bold text-white mb-1">
@@ -368,26 +453,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula }) => {
                   }`}>
                     {cliente && cliente !== '-----' ? cliente : '-----'}
                   </div>
-                  <div className={`text-lg font-bold mb-2 ${
+                  <div className={`text-xl font-bold mb-2 ${
                     nivel === 0 ? 'text-gray-400' : 
                     nivel > 8 ? 'text-red-400' : 'text-green-400'
                   }`}>
                     {nivel.toFixed(1)} mg/L
                   </div>
-                  <div className="h-1 bg-gray-600 rounded mb-1">
+                  <div className="h-1.5 bg-gray-600 rounded mb-1">
                     <div 
                       className={`h-full rounded transition-all duration-300 ${
-                        isInyectando ? 'bg-blue-400 animate-pulse' : 
+                        estadoBarra.isInyectando ? estadoBarra.color : 
                         isActiva ? 'bg-green-400' : 'bg-gray-500'
                       }`}
                       style={{ 
-                        width: isInyectando ? '100%' : `${Math.min((nivel / 15) * 100, 100)}%` 
+                        width: estadoBarra.isInyectando ? estadoBarra.width : `${Math.min((nivel / 15) * 100, 100)}%` 
                       }}
                     ></div>
                   </div>
-                  {isInyectando && (
-                    <div className="text-xs text-blue-400 font-bold animate-pulse">
-                      CARGANDO OXÍGENO
+                  {estadoBarra.isInyectando && (
+                    <div className={`text-xs font-bold ${
+                      estadoBarra.tipo === 'carga' ? 'text-blue-400 animate-pulse' : 
+                      estadoBarra.tipo === 'seteo' ? 'text-green-400' : 'text-gray-400'
+                    }`}>
+                      {estadoBarra.texto}
                     </div>
                   )}
                 </div>

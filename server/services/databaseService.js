@@ -258,11 +258,25 @@ class DatabaseService {
   async procesoCliente(supervisor, cliente, jaula, flujo, nivelOxigeno, tipoInyeccion) {
     try {
       const alias = await this.getAliasEmpresa(cliente);
+      
+      // Insertar en base local
       await this.localConnection.execute(
         `INSERT INTO registroclientes (idCliente, idJaula, HoraInicio, NivelOxigenoInicio, Especie, FlujoTotal, CantPeces) 
          SELECT (SELECT id FROM cliente WHERE alias = ?), ?, NOW(), ?, ?, ?, ?`,
         [alias, jaula, nivelOxigeno, supervisor, flujo / 60, tipoInyeccion]
       );
+      
+      console.log(`📤 INYECCIÓN ENVIADA AL SISTEMA EN LÍNEA - JAULA ${jaula}`);
+      console.log(`   🌐 ReadConnectionHost: ${config.DB_HOST_REMOTE}`);
+      console.log(`   📊 Cliente: ${cliente} (${alias})`);
+      console.log(`   📊 Supervisor: ${supervisor}`);
+      console.log(`   📊 Nivel: ${nivelOxigeno} mg/L`);
+      console.log(`   📊 Tipo: ${tipoInyeccion}`);
+      console.log(`   📊 Flujo: ${flujo} m³/h`);
+      
+      // Sincronizar inmediatamente con ReadConnectionHost
+      await this.syncInyeccionInmediata(alias, jaula, nivelOxigeno, supervisor, flujo / 60, tipoInyeccion);
+      
       return true;
     } catch (error) {
       console.error('Error en proceso cliente:', error.message);
@@ -274,6 +288,8 @@ class DatabaseService {
   async procesoClienteCierre(supervisor, cliente, jaula, flujo, nivelOxigeno) {
     try {
       const alias = await this.getAliasEmpresa(cliente);
+      
+      // Actualizar en base local
       await this.localConnection.execute(
         `UPDATE registroclientes SET 
          NivelOxigenoTermino = ?, Especie = ?, HoraTermino = NOW(),
@@ -281,6 +297,16 @@ class DatabaseService {
          WHERE id = (SELECT id FROM registroclientes WHERE NivelOxigenoTermino IS NULL AND idJaula = ? ORDER BY FechaRegistro DESC LIMIT 1)`,
         [nivelOxigeno, supervisor, jaula, jaula]
       );
+      
+      console.log(`📤 CIERRE DE INYECCIÓN ENVIADO AL SISTEMA EN LÍNEA - JAULA ${jaula}`);
+      console.log(`   🌐 ReadConnectionHost: ${config.DB_HOST_REMOTE}`);
+      console.log(`   📊 Cliente: ${cliente} (${alias})`);
+      console.log(`   📊 Supervisor: ${supervisor}`);
+      console.log(`   📊 Nivel final: ${nivelOxigeno} mg/L`);
+      
+      // Sincronizar cierre inmediatamente con ReadConnectionHost
+      await this.syncCierreInmediato(alias, jaula, nivelOxigeno, supervisor);
+      
       return true;
     } catch (error) {
       console.error('Error en proceso cliente cierre:', error.message);
@@ -298,6 +324,58 @@ class DatabaseService {
       return true;
     } catch (error) {
       console.error('Error insertando nivel tanque:', error.message);
+      return false;
+    }
+  }
+
+  // Sincronizar inyección inmediatamente con ReadConnectionHost
+  async syncInyeccionInmediata(alias, jaula, nivelOxigeno, supervisor, flujoTotal, tipoInyeccion) {
+    if (!this.remoteConnection) {
+      console.log('⚠️ No hay conexión remota para sincronizar inyección');
+      return false;
+    }
+
+    try {
+      // Insertar inyección en ReadConnectionHost
+      await this.remoteConnection.execute(
+        `INSERT INTO registroclientes (idCliente, idJaula, HoraInicio, NivelOxigenoInicio, Especie, FlujoTotal, CantPeces) 
+         SELECT (SELECT id FROM cliente WHERE alias = ?), ?, NOW(), ?, ?, ?, ?`,
+        [alias, jaula, nivelOxigeno, supervisor, flujoTotal, tipoInyeccion]
+      );
+      
+      console.log(`✅ INYECCIÓN SINCRONIZADA CON READCONNECTIONHOST - JAULA ${jaula}`);
+      console.log(`   🌐 IP: ${config.DB_HOST_REMOTE}`);
+      console.log(`   📊 Base: ${config.DB_NAME_REMOTE}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Error sincronizando inyección con ReadConnectionHost:`, error.message);
+      return false;
+    }
+  }
+
+  // Sincronizar cierre de inyección inmediatamente con ReadConnectionHost
+  async syncCierreInmediato(alias, jaula, nivelOxigeno, supervisor) {
+    if (!this.remoteConnection) {
+      console.log('⚠️ No hay conexión remota para sincronizar cierre');
+      return false;
+    }
+
+    try {
+      // Actualizar cierre en ReadConnectionHost
+      await this.remoteConnection.execute(
+        `UPDATE registroclientes SET 
+         NivelOxigenoTermino = ?, Especie = ?, HoraTermino = NOW()
+         WHERE idJaula = ? AND NivelOxigenoTermino IS NULL 
+         ORDER BY HoraInicio DESC LIMIT 1`,
+        [nivelOxigeno, supervisor, jaula]
+      );
+      
+      console.log(`✅ CIERRE SINCRONIZADO CON READCONNECTIONHOST - JAULA ${jaula}`);
+      console.log(`   🌐 IP: ${config.DB_HOST_REMOTE}`);
+      console.log(`   📊 Base: ${config.DB_NAME_REMOTE}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Error sincronizando cierre con ReadConnectionHost:`, error.message);
       return false;
     }
   }
