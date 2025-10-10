@@ -92,7 +92,7 @@ class Server {
 
   setupWebSocket() {
     this.io.on('connection', (socket) => {
-      console.log('🔌 Cliente WebSocket conectado:', socket.id);
+      console.log('Cliente WebSocket conectado:', socket.id);
 
       // Enviar estado inicial
       if (this.jaulaController) {
@@ -101,7 +101,7 @@ class Server {
 
       // Manejar desconexión
       socket.on('disconnect', () => {
-        console.log('🔌 Cliente WebSocket desconectado:', socket.id);
+        console.log('Cliente WebSocket desconectado:', socket.id);
       });
 
       // Manejar solicitud de estado
@@ -125,14 +125,14 @@ class Server {
     try {
       // Iniciar servidor primero
       this.server.listen(config.PORT, () => {
-        console.log(`🚀 Servidor iniciado en puerto ${config.PORT}`);
-        console.log(`📡 WebSocket disponible en puerto ${config.PORT}`);
-        console.log(`🌐 API disponible en http://localhost:${config.PORT}`);
-        console.log(`📊 Health check: http://localhost:${config.PORT}/health`);
+        console.log(`Servidor iniciado en puerto ${config.PORT}`);
+        console.log(`WebSocket disponible en puerto ${config.PORT}`);
+        console.log(`API disponible en http://localhost:${config.PORT}`);
+        console.log(`Health check: http://localhost:${config.PORT}/health`);
       });
 
       // Inicializar servicios después
-      console.log('🚀 Inicializando servicios...');
+      console.log('Inicializando servicios...');
       this.dbService = new DatabaseService();
       await this.dbService.connect();
       
@@ -153,7 +153,7 @@ class Server {
   }
 
   async shutdown() {
-    console.log('🔄 Cerrando servidor...');
+    console.log('Cerrando servidor...');
     
     try {
       if (this.jaulaController) {
@@ -161,7 +161,7 @@ class Server {
       }
       
       this.server.close(() => {
-        console.log('✅ Servidor cerrado correctamente');
+        console.log('Servidor cerrado correctamente');
         process.exit(0);
       });
     } catch (error) {

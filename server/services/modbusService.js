@@ -19,7 +19,7 @@ class ModbusService {
       this.client.setID(1); // ID del dispositivo Modbus
       this.isConnected = true;
       this.connectionAttempts = 0;
-      console.log(`✅ Conectado al PLC en ${config.PLC_IP}:${config.PLC_PORT}`);
+      console.log(`Conectado al PLC en ${config.PLC_IP}:${config.PLC_PORT}`);
       return true;
     } catch (error) {
       this.connectionAttempts++;
@@ -27,13 +27,13 @@ class ModbusService {
       // Solo mostrar error en el primer intento para evitar spam de logs
       if (this.connectionAttempts === 1) {
         console.error(`❌ Error de conexión Modbus (intento ${this.connectionAttempts}):`, error.message);
-        console.log(`💡 Verificar que el PLC tenga Modbus TCP habilitado en puerto ${config.PLC_PORT}`);
+        console.log(`Verificar que el PLC tenga Modbus TCP habilitado en puerto ${config.PLC_PORT}`);
       }
       
       if (this.connectionAttempts < this.maxRetries) {
         // Solo mostrar mensaje de reintento en el primer intento
         if (this.connectionAttempts === 1) {
-          console.log(`🔄 Reintentando conexión en 5 segundos...`);
+          console.log(`Reintentando conexión en 5 segundos...`);
         }
         await new Promise(resolve => setTimeout(resolve, 5000));
         return this.connect();
@@ -42,7 +42,7 @@ class ModbusService {
       this.isConnected = false;
       // Solo mostrar mensaje final una vez
       if (this.connectionAttempts === this.maxRetries) {
-        console.log(`⚠️ No se pudo conectar al PLC después de ${this.maxRetries} intentos. Continuando sin conexión Modbus.`);
+        console.log(`No se pudo conectar al PLC después de ${this.maxRetries} intentos. Continuando sin conexión Modbus.`);
       }
       return false;
     }
@@ -53,7 +53,7 @@ class ModbusService {
       if (this.isConnected) {
         await this.client.close();
         this.isConnected = false;
-        console.log('🔌 Desconectado del PLC');
+        console.log('Desconectado del PLC');
       }
     } catch (error) {
       console.error('Error al desconectar:', error.message);
@@ -116,7 +116,7 @@ class ModbusService {
       }
 
       await this.client.writeRegister(register, state ? 1 : 0);
-      console.log(`🔧 Válvula ${jaulaId} ${state ? 'ABIERTA' : 'CERRADA'} (registro ${register})`);
+      console.log(`Válvula ${jaulaId} ${state ? 'ABIERTA' : 'CERRADA'} (registro ${register})`);
       return true;
     } catch (error) {
       console.error(`Error controlando válvula ${jaulaId}:`, error.message);
@@ -143,7 +143,7 @@ class ModbusService {
         await new Promise(resolve => setTimeout(resolve, 100)); // Pequeña pausa
       }
 
-      console.log('🔒 Todas las válvulas cerradas');
+      console.log('Todas las válvulas cerradas');
       return true;
     } catch (error) {
       console.error('Error cerrando válvulas:', error.message);

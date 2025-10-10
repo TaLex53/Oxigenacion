@@ -187,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onConfigurarJaula, jaulaSeleccion
     // Log para diagnosticar
     // Log solo para jaula 111 y solo cuando está activa
     if (jaulaId === 111 && (estaOxigenando || params.oxigenoActivo)) {
-      console.log(`🔍 Dashboard - Jaula ${jaulaId} ACTIVA:`, {
+      console.log(`Dashboard - Jaula ${jaulaId} ACTIVA:`, {
         inyeccion: params.inyeccion,
         esAPedido,
         estaOxigenando,

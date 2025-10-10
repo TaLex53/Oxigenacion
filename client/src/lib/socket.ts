@@ -23,12 +23,12 @@ class SocketService {
     });
 
     this.socket.on('connect', () => {
-      console.log('🔌 Conectado al WebSocket');
+      console.log('Conectado al WebSocket');
       this.emit('connected');
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('🔌 Desconectado del WebSocket:', reason);
+      console.log('Desconectado del WebSocket:', reason);
       this.emit('disconnected');
     });
 

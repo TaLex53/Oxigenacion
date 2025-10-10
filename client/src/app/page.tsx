@@ -56,7 +56,7 @@ export default function Home() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        console.log('📋 Parámetros cargados del localStorage:', parsed);
+        console.log('Parámetros cargados del localStorage:', parsed);
         setParametrosJaulas(parsed);
       } catch (error) {
         console.error('Error cargando parámetros del localStorage:', error);
@@ -113,7 +113,7 @@ export default function Home() {
   // Efecto para detectar cambios en oxigenoActivo (solo para jaula 111 y "A Pedido")
   useEffect(() => {
     if (jaulaSeleccionada === 111 && inyeccion === "A Pedido") {
-      console.log(`🔍 Frontend - Estado oxigenoActivo cambió:`, {
+      console.log(`Frontend - Estado oxigenoActivo cambió:`, {
         timestamp: new Date().toISOString(),
         jaula: jaulaSeleccionada,
         oxigenoActivo,
@@ -220,14 +220,14 @@ export default function Home() {
     
     // Resetear estado de oxigenación automática al cambiar de jaula
     setOxigenacionAutomatica(false);
-    console.log(`🔄 Estado de oxigenación automática reseteado para jaula ${id}`);
+    console.log(`Estado de oxigenación automática reseteado para jaula ${id}`);
     
     // Cargar parámetros específicos de la jaula seleccionada
     const parametrosJaula = parametrosJaulas[id];
     
     if (parametrosJaula) {
       // Si ya tiene parámetros configurados, cargarlos
-      console.log(`📋 Cargando parámetros guardados para jaula ${id}:`, parametrosJaula);
+      console.log(`Cargando parámetros guardados para jaula ${id}:`, parametrosJaula);
       setCliente(parametrosJaula.cliente);
       setMinimo(parametrosJaula.minimo);
       setMaximo(parametrosJaula.maximo);
@@ -237,7 +237,7 @@ export default function Home() {
       setOxigenoActivo(parametrosJaula.oxigenoActivo);
     } else {
       // Si es la primera vez, usar valores por defecto
-      console.log(`🆕 Primera configuración para jaula ${id}, usando valores por defecto`);
+      console.log(`Primera configuración para jaula ${id}, usando valores por defecto`);
       setCliente('');
       setMinimo('0');
       setMaximo('0');
@@ -278,7 +278,7 @@ export default function Home() {
     
     // Log solo cuando hay cambios importantes
     if (jaulaSeleccionada === 111 && inyeccion === "A Pedido") {
-      console.log(`🔍 Frontend - Verificando oxigenación automática:`, {
+      console.log(`Frontend - Verificando oxigenación automática:`, {
         timestamp: new Date().toISOString(),
         jaula: jaulaSeleccionada,
         nivel: nivelActual,
@@ -296,16 +296,16 @@ export default function Home() {
     
     // Para "A Pedido", no hacer verificaciones automáticas
     if (esAPedido) {
-      console.log(`🔧 Modo "A Pedido" detectado - No se realizan verificaciones automáticas`);
-      console.log(`   📊 Valores detectados: min=${min}, max=${max}`);
-      console.log(`   📊 Condición esAPedido: ${esAPedido}`);
-      console.log(`   📊 Jaula: ${jaulaSeleccionada}, OxigenacionAutomatica: ${oxigenacionAutomatica}`);
+      console.log(`Modo "A Pedido" detectado - No se realizan verificaciones automáticas`);
+      console.log(`   Valores detectados: min=${min}, max=${max}`);
+      console.log(`   Condición esAPedido: ${esAPedido}`);
+      console.log(`   Jaula: ${jaulaSeleccionada}, OxigenacionAutomatica: ${oxigenacionAutomatica}`);
       return;
     }
     
     // Si el oxígeno está cerrado manualmente, no reactivar automáticamente
     if (!oxigenoActivo) {
-      console.log(`🔒 Oxígeno cerrado manualmente - No reactivando automáticamente para jaula ${jaulaSeleccionada}`);
+      console.log(`Oxígeno cerrado manualmente - No reactivando automáticamente para jaula ${jaulaSeleccionada}`);
       return;
     }
     
@@ -317,9 +317,9 @@ export default function Home() {
       
       if ((esValorExacto || dentroDelRango) && !oxigenacionAutomatica) {
         if (esValorExacto) {
-          console.log(`🔄 Activando modo SETEO para jaula ${jaulaSeleccionada} - Nivel: ${nivelActual} mg/L (valor exacto ${min})`);
+          console.log(`Activando modo SETEO para jaula ${jaulaSeleccionada} - Nivel: ${nivelActual} mg/L (valor exacto ${min})`);
         } else {
-          console.log(`🔄 Activando modo SETEO para jaula ${jaulaSeleccionada} - Nivel: ${nivelActual} mg/L (rango ${min}-${max})`);
+          console.log(`Activando modo SETEO para jaula ${jaulaSeleccionada} - Nivel: ${nivelActual} mg/L (rango ${min}-${max})`);
         }
         setOxigenacionAutomatica(true);
         await activarOxigenoAutomatico();
@@ -327,18 +327,18 @@ export default function Home() {
       // Si el nivel está fuera del rango, desactivar modo seteo
       // Para valores exactos (5.5-5.5), NO cerrar automáticamente, solo oscilar
       else if (!esValorExacto && !dentroDelRango) {
-        console.log(`🛑 Desactivando modo SETEO para jaula ${jaulaSeleccionada} - Nivel: ${nivelActual} mg/L (fuera del rango ${min}-${max})`);
+        console.log(`Desactivando modo SETEO para jaula ${jaulaSeleccionada} - Nivel: ${nivelActual} mg/L (fuera del rango ${min}-${max})`);
         setOxigenacionAutomatica(false);
       }
       // Para rangos (9.9-10), cerrar automáticamente cuando alcance el máximo
       else if (min !== max && alcanzoMaximo && oxigenoActivo) {
-        console.log(`🔒 Cerrando oxígeno automáticamente - Jaula ${jaulaSeleccionada} alcanzó máximo ${max} mg/L (rango ${min}-${max})`);
+        console.log(`Cerrando oxígeno automáticamente - Jaula ${jaulaSeleccionada} alcanzó máximo ${max} mg/L (rango ${min}-${max})`);
         setOxigenacionAutomatica(false);
         setOxigenoActivo(false);
         // Enviar comando de cierre al servidor
         try {
           await jaulaAPI.controlarJaula(jaulaSeleccionada, 'cerrar', supervisor, cliente, inyeccion);
-          console.log(`✅ Cierre automático enviado al servidor para jaula ${jaulaSeleccionada}`);
+          console.log(`Cierre automático enviado al servidor para jaula ${jaulaSeleccionada}`);
         } catch (error) {
           console.error('Error cerrando oxígeno automáticamente:', error);
         }
@@ -347,7 +347,7 @@ export default function Home() {
       // Si no es seteo válido, desactivar oxigenación automática
       // PERO NO si es "A Pedido" (ya manejado arriba)
       if (oxigenacionAutomatica && !esAPedido) {
-        console.log(`🛑 Desactivando oxigenación automática - Rango inválido: ${min}-${max}`);
+        console.log(`Desactivando oxigenación automática - Rango inválido: ${min}-${max}`);
         setOxigenacionAutomatica(false);
       }
     }
@@ -356,7 +356,7 @@ export default function Home() {
   // Función para activar oxígeno automáticamente
   const activarOxigenoAutomatico = async () => {
     try {
-      console.log(`🤖 Activando oxígeno automáticamente para jaula ${jaulaSeleccionada}`);
+      console.log(`Activando oxígeno automáticamente para jaula ${jaulaSeleccionada}`);
       
       // Primero configurar los límites en el servidor
       const limitesResult = await jaulaAPI.configurarLimites(
@@ -366,7 +366,7 @@ export default function Home() {
       );
       
       if (limitesResult.success) {
-        console.log(`✅ Límites configurados: ${minimo}-${maximo} mg/L para jaula ${jaulaSeleccionada}`);
+        console.log(`Límites configurados: ${minimo}-${maximo} mg/L para jaula ${jaulaSeleccionada}`);
         
         // Luego activar el oxígeno
         const result = await jaulaAPI.controlarJaula(
@@ -381,7 +381,7 @@ export default function Home() {
         
         if (result.success) {
           setOxigenoActivo(true);
-          console.log(`✅ Oxígeno activado automáticamente para jaula ${jaulaSeleccionada}`);
+          console.log(`Oxígeno activado automáticamente para jaula ${jaulaSeleccionada}`);
         } else {
           console.error('❌ Error activando oxígeno automáticamente:', result.message);
         }
@@ -398,7 +398,7 @@ export default function Home() {
   const handleToggleOxigeno = async () => {
     try {
       const action = oxigenoActivo ? 'cerrar' : 'abrir';
-      console.log(`🔄 ${action === 'abrir' ? 'Iniciando' : 'Cerrando'} oxígeno para jaula ${jaulaSeleccionada}`);
+      console.log(`${action === 'abrir' ? 'Iniciando' : 'Cerrando'} oxígeno para jaula ${jaulaSeleccionada}`);
       
       // Si se va a abrir, primero configurar los límites
       if (action === 'abrir') {
@@ -413,7 +413,7 @@ export default function Home() {
           return;
         }
         
-        console.log(`✅ Límites configurados: ${minimo}-${maximo} mg/L para jaula ${jaulaSeleccionada}`);
+        console.log(`Límites configurados: ${minimo}-${maximo} mg/L para jaula ${jaulaSeleccionada}`);
       }
       
       // Llamar a la API para controlar la jaula
@@ -441,14 +441,14 @@ export default function Home() {
         }));
         
         // Log para diagnosticar cambios de estado
-        console.log(`🔄 Estado oxigenoActivo cambiado para jaula ${jaulaSeleccionada}:`, {
+        console.log(`Estado oxigenoActivo cambiado para jaula ${jaulaSeleccionada}:`, {
           nuevoEstado,
           inyeccion: parametrosJaulas[jaulaSeleccionada]?.inyeccion,
           accion: action
         });
         
         if (action === 'abrir') {
-          console.log(`✅ Oxígeno iniciado para jaula ${jaulaSeleccionada}`);
+          console.log(`Oxígeno iniciado para jaula ${jaulaSeleccionada}`);
           console.log(`   Cliente: ${cliente}`);
           console.log(`   Supervisor: ${supervisor}`);
           console.log(`   Inyección: ${inyeccion}`);
@@ -456,12 +456,12 @@ export default function Home() {
         } else {
           // Si se cierra manualmente, desactivar oxigenación automática
           setOxigenacionAutomatica(false);
-          console.log(`🛑 Oxígeno cerrado manualmente para jaula ${jaulaSeleccionada} - Desactivando oxigenación automática`);
+          console.log(`Oxígeno cerrado manualmente para jaula ${jaulaSeleccionada} - Desactivando oxigenación automática`);
           
           // Forzar el cierre en el servidor
           try {
             await jaulaAPI.controlarJaula(jaulaSeleccionada, 'cerrar', supervisor, cliente, inyeccion);
-            console.log(`🔒 Cierre forzado enviado al servidor para jaula ${jaulaSeleccionada}`);
+            console.log(`Cierre forzado enviado al servidor para jaula ${jaulaSeleccionada}`);
           } catch (error) {
             console.error('Error forzando cierre:', error);
           }

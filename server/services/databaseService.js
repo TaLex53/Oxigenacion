@@ -20,7 +20,7 @@ class DatabaseService {
         timeout: 60000,
         reconnect: true
       });
-      console.log('✅ Conectado a MySQL Local (ReadConnection)');
+      console.log('Conectado a MySQL Local (ReadConnection)');
 
       // Conexión Remota (ReadConnectionHost)
       try {
@@ -33,13 +33,13 @@ class DatabaseService {
           timeout: 60000,
           reconnect: true
         });
-        console.log('✅ Conectado a MySQL Remota (ReadConnectionHost)');
+        console.log('Conectado a MySQL Remota (ReadConnectionHost)');
         
         // Iniciar sincronización cada 60 segundos
         this.startSync();
       } catch (remoteError) {
         console.warn('⚠️ No se pudo conectar a MySQL Remota:', remoteError.message);
-        console.log('🔄 Continuando solo con base de datos local');
+        console.log('Continuando solo con base de datos local');
       }
 
       return true;
@@ -60,14 +60,14 @@ class DatabaseService {
     if (this.localConnection) {
       await this.localConnection.end();
       this.localConnection = null;
-      console.log('🔌 Desconectado de MySQL Local');
+      console.log('Desconectado de MySQL Local');
     }
 
     // Desconectar base remota
     if (this.remoteConnection) {
       await this.remoteConnection.end();
       this.remoteConnection = null;
-      console.log('🔌 Desconectado de MySQL Remota');
+      console.log('Desconectado de MySQL Remota');
     }
   }
 
@@ -81,13 +81,13 @@ class DatabaseService {
       await this.syncToRemote();
     }, 60000); // 60 segundos
 
-    console.log('🔄 Sincronización iniciada cada 60 segundos');
+    console.log('Sincronización iniciada cada 60 segundos');
   }
 
   // Sincronizar datos a la base remota
   async syncToRemote() {
     if (!this.remoteConnection) {
-      console.log('⚠️ No hay conexión remota para sincronizar');
+      console.log('No hay conexión remota para sincronizar');
       return;
     }
 
@@ -117,7 +117,7 @@ class DatabaseService {
             [row.idJaula, row.NivelOxigeno, row.Estado, row.Cliente, row.FechaRegistro, row.HoraRegistro]
           );
         }
-        console.log(`📤 Sincronizados ${rows.length} registros a la base remota`);
+        console.log(`Sincronizados ${rows.length} registros a la base remota`);
       }
     } catch (error) {
       console.error('❌ Error en sincronización remota:', error.message);
@@ -127,13 +127,13 @@ class DatabaseService {
   // Obtener lista de clientes
   async getClientes() {
     try {
-      console.log('🔄 Consultando clientes en la base de datos...');
+      console.log('Consultando clientes en la base de datos...');
       const [rows] = await this.localConnection.execute(
         'SELECT NombreCliente FROM cliente ORDER BY NombreCliente ASC'
       );
-      console.log(`📊 Encontrados ${rows.length} clientes en la base de datos`);
+      console.log(`Encontrados ${rows.length} clientes en la base de datos`);
       const clientes = rows.map(row => row.NombreCliente);
-      console.log('📊 Lista de clientes:', clientes);
+      console.log('Lista de clientes:', clientes);
       return clientes;
     } catch (error) {
       console.error('❌ Error obteniendo clientes:', error.message);
@@ -149,7 +149,7 @@ class DatabaseService {
         const [columnRows] = await this.localConnection.execute(
           'DESCRIBE registros'
         );
-        console.log('📊 Columnas en tabla registros:', columnRows.map(r => r.Field));
+        console.log('Columnas en tabla registros:', columnRows.map(r => r.Field));
         
         // Buscar columnas que puedan contener nombres de inyección
         const inyeccionColumns = columnRows.filter(r => 
@@ -157,17 +157,17 @@ class DatabaseService {
           r.Field.toLowerCase().includes('tipo') ||
           r.Field.toLowerCase().includes('nombre')
         );
-        console.log('📊 Columnas relacionadas con inyección:', inyeccionColumns);
+        console.log('Columnas relacionadas con inyección:', inyeccionColumns);
         
       } catch (e) {
-        console.log('📊 Error verificando estructura de tabla:', e.message);
+        console.log('Error verificando estructura de tabla:', e.message);
       }
       
       const [rows] = await this.localConnection.execute(
         'SELECT IdJaula, CantPeces FROM registros WHERE FechaRegistro >= DATE_SUB(NOW(), INTERVAL 1 HOUR) ORDER BY IdJaula, FechaRegistro DESC'
       );
       
-      console.log('📊 Valores CantPeces encontrados en BD:', [...new Set(rows.map(r => r.CantPeces))]);
+      console.log('Valores CantPeces encontrados en BD:', [...new Set(rows.map(r => r.CantPeces))]);
       
       const tiposInyeccion = {};
       rows.forEach(row => {
@@ -266,13 +266,13 @@ class DatabaseService {
         [alias, jaula, nivelOxigeno, supervisor, flujo / 60, tipoInyeccion]
       );
       
-      console.log(`📤 INYECCIÓN ENVIADA AL SISTEMA EN LÍNEA - JAULA ${jaula}`);
-      console.log(`   🌐 ReadConnectionHost: ${config.DB_HOST_REMOTE}`);
-      console.log(`   📊 Cliente: ${cliente} (${alias})`);
-      console.log(`   📊 Supervisor: ${supervisor}`);
-      console.log(`   📊 Nivel: ${nivelOxigeno} mg/L`);
-      console.log(`   📊 Tipo: ${tipoInyeccion}`);
-      console.log(`   📊 Flujo: ${flujo} m³/h`);
+      console.log(`INYECCIÓN ENVIADA AL SISTEMA EN LÍNEA - JAULA ${jaula}`);
+      console.log(`   ReadConnectionHost: ${config.DB_HOST_REMOTE}`);
+      console.log(`   Cliente: ${cliente} (${alias})`);
+      console.log(`   Supervisor: ${supervisor}`);
+      console.log(`   Nivel: ${nivelOxigeno} mg/L`);
+      console.log(`   Tipo: ${tipoInyeccion}`);
+      console.log(`   Flujo: ${flujo} m³/h`);
       
       // Sincronizar inmediatamente con ReadConnectionHost
       await this.syncInyeccionInmediata(alias, jaula, nivelOxigeno, supervisor, flujo / 60, tipoInyeccion);
@@ -298,11 +298,11 @@ class DatabaseService {
         [nivelOxigeno, supervisor, jaula, jaula]
       );
       
-      console.log(`📤 CIERRE DE INYECCIÓN ENVIADO AL SISTEMA EN LÍNEA - JAULA ${jaula}`);
-      console.log(`   🌐 ReadConnectionHost: ${config.DB_HOST_REMOTE}`);
-      console.log(`   📊 Cliente: ${cliente} (${alias})`);
-      console.log(`   📊 Supervisor: ${supervisor}`);
-      console.log(`   📊 Nivel final: ${nivelOxigeno} mg/L`);
+      console.log(`CIERRE DE INYECCIÓN ENVIADO AL SISTEMA EN LÍNEA - JAULA ${jaula}`);
+      console.log(`   ReadConnectionHost: ${config.DB_HOST_REMOTE}`);
+      console.log(`   Cliente: ${cliente} (${alias})`);
+      console.log(`   Supervisor: ${supervisor}`);
+      console.log(`   Nivel final: ${nivelOxigeno} mg/L`);
       
       // Sincronizar cierre inmediatamente con ReadConnectionHost
       await this.syncCierreInmediato(alias, jaula, nivelOxigeno, supervisor);
@@ -331,7 +331,7 @@ class DatabaseService {
   // Sincronizar inyección inmediatamente con ReadConnectionHost
   async syncInyeccionInmediata(alias, jaula, nivelOxigeno, supervisor, flujoTotal, tipoInyeccion) {
     if (!this.remoteConnection) {
-      console.log('⚠️ No hay conexión remota para sincronizar inyección');
+      console.log('No hay conexión remota para sincronizar inyección');
       return false;
     }
 
@@ -343,9 +343,9 @@ class DatabaseService {
         [alias, jaula, nivelOxigeno, supervisor, flujoTotal, tipoInyeccion]
       );
       
-      console.log(`✅ INYECCIÓN SINCRONIZADA CON READCONNECTIONHOST - JAULA ${jaula}`);
-      console.log(`   🌐 IP: ${config.DB_HOST_REMOTE}`);
-      console.log(`   📊 Base: ${config.DB_NAME_REMOTE}`);
+      console.log(`INYECCIÓN SINCRONIZADA CON READCONNECTIONHOST - JAULA ${jaula}`);
+      console.log(`   IP: ${config.DB_HOST_REMOTE}`);
+      console.log(`   Base: ${config.DB_NAME_REMOTE}`);
       return true;
     } catch (error) {
       console.error(`❌ Error sincronizando inyección con ReadConnectionHost:`, error.message);
@@ -356,7 +356,7 @@ class DatabaseService {
   // Sincronizar cierre de inyección inmediatamente con ReadConnectionHost
   async syncCierreInmediato(alias, jaula, nivelOxigeno, supervisor) {
     if (!this.remoteConnection) {
-      console.log('⚠️ No hay conexión remota para sincronizar cierre');
+      console.log('No hay conexión remota para sincronizar cierre');
       return false;
     }
 
@@ -370,9 +370,9 @@ class DatabaseService {
         [nivelOxigeno, supervisor, jaula]
       );
       
-      console.log(`✅ CIERRE SINCRONIZADO CON READCONNECTIONHOST - JAULA ${jaula}`);
-      console.log(`   🌐 IP: ${config.DB_HOST_REMOTE}`);
-      console.log(`   📊 Base: ${config.DB_NAME_REMOTE}`);
+      console.log(`CIERRE SINCRONIZADO CON READCONNECTIONHOST - JAULA ${jaula}`);
+      console.log(`   IP: ${config.DB_HOST_REMOTE}`);
+      console.log(`   Base: ${config.DB_NAME_REMOTE}`);
       return true;
     } catch (error) {
       console.error(`❌ Error sincronizando cierre con ReadConnectionHost:`, error.message);

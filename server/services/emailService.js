@@ -48,7 +48,7 @@ class EmailService {
       }
 
       const result = await this.transporter.sendMail(mailOptions);
-      console.log(`📧 Alerta enviada para jaula ${jaula} (${tiempo} min)`);
+      console.log(`Alerta enviada para jaula ${jaula} (${tiempo} min)`);
       return { success: true, messageId: result.messageId };
     } catch (error) {
       console.error('Error enviando email:', error.message);
@@ -70,7 +70,7 @@ class EmailService {
   async testConnection() {
     try {
       await this.transporter.verify();
-      console.log('✅ Servidor de email configurado correctamente');
+      console.log('Servidor de email configurado correctamente');
       return true;
     } catch (error) {
       console.error('❌ Error en configuración de email:', error.message);

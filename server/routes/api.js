@@ -245,7 +245,7 @@ router.get('/flujo', async (req, res) => {
 router.get('/clientes', async (req, res) => {
   try {
     if (!dbService) {
-      console.log('⚠️ Database service not initialized, waiting...');
+      console.log('Database service not initialized, waiting...');
       // Esperar un poco y reintentar
       await new Promise(resolve => setTimeout(resolve, 1000));
       if (!dbService) {
